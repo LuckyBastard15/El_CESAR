@@ -2,12 +2,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class MovementStateManager : MonoBehaviour
 {
-    [SerializeField] private float moveSpeed = 3;
+    public float currentMoveSpeed;
+    public float walkSpeed = 3, walkBackSpeed = 2;
+    public float runSpeed = 7, runBackSpeed = 5;
+    public float crouchSpeed = 2, crouchBackSpeed = 1;
+    
     [HideInInspector] public Vector3 dir;
-    private float hzInput, vInput;
+    [HideInInspector] public float hzInput, vInput;
     private CharacterController _characterController;
 
     [SerializeField] private float groundYOffSet;
@@ -16,11 +21,22 @@ public class MovementStateManager : MonoBehaviour
 
     [SerializeField] private float gravity = -9.81f;
     private Vector3 velocity;
+
+    private MovementBaseState currentState;
+
+    public IdleState Idle = new IdleState();
+    public WalkState Walk = new WalkState();
+    public CrouchState Crouch = new CrouchState();
+    public RunState Run = new RunState();
+
+    [HideInInspector] public Animator animator;
     
     // Start is called before the first frame update
     void Start()
     {
+        animator = GetComponent<Animator>();
         _characterController = GetComponent<CharacterController>();
+        SwitchState(Idle);
     }
 
     // Update is called once per frame
@@ -28,6 +44,17 @@ public class MovementStateManager : MonoBehaviour
     {
         GetDirectionAndMove();
         Gravity();
+        
+        animator.SetFloat("hzInput", hzInput);
+        animator.SetFloat("vInput", vInput);
+        
+        currentState.UpdateState(this);
+    }
+
+    public void SwitchState(MovementBaseState state)
+    {
+        currentState = state;
+        currentState.EnterState(this);
     }
 
     private void GetDirectionAndMove()
@@ -37,7 +64,7 @@ public class MovementStateManager : MonoBehaviour
 
         dir = transform.forward * vInput + transform.right * hzInput;
 
-        _characterController.Move(dir * moveSpeed * Time.deltaTime);
+        _characterController.Move(dir.normalized * currentMoveSpeed * Time.deltaTime);
     }
 
     private bool isGrounded()
@@ -67,4 +94,5 @@ public class MovementStateManager : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(spherePos, _characterController.radius - 0.05f);
     }
+    
 }
